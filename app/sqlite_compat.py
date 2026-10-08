@@ -234,6 +234,18 @@ def install_sqlite_compat(engine: Engine) -> None:
     event.listen(Lead, "load", _normalize_lead_on_load)
     event.listen(Lead, "refresh", _normalize_lead_on_load)
 
+    # RSVPToken.expires_at also needs naive->aware normalization on SQLite.
+    from app.models import RSVPToken as _RSVPToken
+
+    def _normalize_rsvp_on_load(target, *args):
+        """Normalize naive datetimes on an RSVPToken instance after loading."""
+        val = getattr(target, "expires_at", None)
+        if isinstance(val, datetime) and val.tzinfo is None:
+            target.expires_at = val.replace(tzinfo=timezone.utc)
+
+    event.listen(_RSVPToken, "load", _normalize_rsvp_on_load)
+    event.listen(_RSVPToken, "refresh", _normalize_rsvp_on_load)
+
     # C12 (read path): Normalize booleans on FailedJob after load/refresh.
     # FailedJob.resolved is declared as String (not Boolean) in the model.
     # SQLite stores boolean values as strings "true"/"false"/"1"/"0".
