@@ -1,0 +1,45 @@
+# Caddyfile — TLS-terminating reverse proxy for production.
+#
+# Replace strategy-calls.example.com with your actual domain.
+# Caddy automatically obtains and renews Let's Encrypt certificates.
+#
+# Phase 5 — Production Deployment Hardening
+
+strategy-calls.example.com {
+    # Forward all traffic to the FastAPI app
+    reverse_proxy app:8000 {
+        # Pass real client IP for rate limiting
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Real-IP {remote_host}
+    }
+
+    # Security headers (supplement app-level headers)
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Enable compression
+    encode gzip zstd
+
+    # Health check endpoint (no logging)
+    handle /health {
+        reverse_proxy app:8000
+    }
+
+    # Log all requests
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50m
+            roll_keep 3
+        }
+    }
+}
+
+# Redirect HTTP to HTTPS
+:80 {
+    redir https://{host}{uri} permanent
+}

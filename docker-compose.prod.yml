@@ -1,0 +1,71 @@
+# Production Docker Compose override - use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Adds production-only configuration on top of the base docker-compose.yml:
+#   - Resource limits for db and app
+#   - Log rotation to prevent disk exhaustion
+#   - Network isolation (db not exposed to host)
+#   - Production-specific environment variables
+#   - Reverse proxy (Caddy) for TLS termination
+#
+# Phase 5 - Production Deployment Hardening
+
+services:
+  db:
+    # Remove host port mapping - only accessible from the app network
+    ports: []
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  app:
+    # SECURITY (H7): remove the host port mapping in production - the app
+    # must only be reachable through Caddy (TLS termination, HSTS,
+    # access logging).  Direct plain-HTTP access to port 8000 would
+    # bypass all of that.
+    ports: []
+    environment:
+      - APP_ENV=production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # Reverse proxy for TLS termination and HTTP/2
+  # Uses Caddy for automatic HTTPS via Let's Encrypt.
+  # Requires: public DNS A record pointing to the server.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - default
+
+volumes:
+  pgdata:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local

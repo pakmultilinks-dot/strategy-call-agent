@@ -1,0 +1,33 @@
+# Phase 0 minimum: bare FastAPI health-check server + Postgres connectivity.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+gunicorn>=22.0
+sqlalchemy>=2.0
+psycopg2-binary>=2.9
+pydantic-settings>=2.2
+python-dotenv>=1.0
+email-validator>=2.0  # required by pydantic EmailStr (Phase 0.5 schemas)
+
+# Phase 1: Google APIs, AI router client, retry
+google-api-python-client>=2.100
+google-auth>=2.29
+google-auth-oauthlib>=1.2
+openai>=1.30
+tenacity>=8.2
+dateparser>=1.2  # tolerant free-text appt time parsing at ingest
+apscheduler>=3.10  # in-process scheduler for RSVP poll + daily reminder (Phase 3)
+
+# Phase 6B.1: Multi-tenant foundation
+alembic>=1.13
+cryptography>=42.0
+
+# Phase 6B.3: Authentication + Authorization
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3
+bcrypt<5  # passlib compatibility — bcrypt 5.x breaks passlib's backend detection
+
+# HTTP client for OAuth token exchange, API calls
+httpx>=0.27
+
+# Timezone database for zoneinfo (required by python:3.13-slim in production)
+tzdata>=2024.1

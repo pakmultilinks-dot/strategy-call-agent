@@ -1,0 +1,49 @@
+# Secrets — never commit
+.env
+credentials.json
+token.json
+*.token
+*.token_tmp
+*.pem
+*.key
+.dev_jwt_secret
+
+# Database files
+*.db
+*.db-journal
+*.sqlite3
+pgdata/
+
+# Backups — may contain encrypted credential data, never commit
+backups/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Deployment artifacts
+docker-compose.override.yml
+
+# Ruff
+.ruff_cache/
+
+# Temporary test output / debug artifacts
+debug_*.txt
+full_suite_results.txt
+regression_results.txt
+phase32_*.txt
+test_results_*.txt
+test_failures*.txt
+test_all_failures.txt
+*.token_cache.txt
+*.txt
+!requirements.txt

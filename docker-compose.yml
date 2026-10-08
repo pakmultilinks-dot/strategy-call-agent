@@ -1,0 +1,91 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: strategy-call-agent-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-strategy_calls}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-strategy_calls}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: strategy-call-agent-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override DATABASE_URL to use the db service hostname in Docker
+      DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-strategy_calls}
+      SCHEDULER_ENABLED: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  # Phase 27 (P0-6): Automated database backup sidecar
+  # Runs pg_dump daily at 03:00 UTC and retains backups for 30 days.
+  # Only active in production (docker-compose.prod.yml).
+  # To run manually: docker compose run --rm backup
+  backup:
+    image: postgres:16-alpine
+    container_name: strategy-call-agent-backup
+    env_file:
+      - .env
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-strategy_calls}
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts
+    depends_on:
+      db:
+        condition: service_healthy
+    # Default: just sleep (manual run via `docker compose run --rm backup`)
+    # Override with backup_schedule profile for automated daily backups
+    command: ["sleep", "infinity"]
+    profiles:
+      - backup_schedule
+
+  # Backup scheduler — runs daily at 03:00 UTC via cron
+  backup_scheduler:
+    image: postgres:16-alpine
+    container_name: strategy-call-agent-backup-scheduler
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-strategy_calls}
+      TZ: UTC
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts
+    depends_on:
+      db:
+        condition: service_healthy
+    # Install cron, add daily backup job, run cron in foreground
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache bash
+        echo "0 3 * * * /bin/bash /scripts/backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+        crond -f -l 2
+    profiles:
+      - backup_schedule
+
+volumes:
+  pgdata:

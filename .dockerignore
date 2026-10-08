@@ -1,0 +1,73 @@
+# Version control
+.git/
+.gitignore
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Environment & secrets
+.env
+.env.*
+token.json
+credentials.json
+*.pem
+*.key
+
+# Database files
+*.db
+*.sqlite3
+pgdata/
+
+# Tests (not needed in production image)
+tests/
+
+# Documentation (not needed in production image)
+docs/
+*.md
+
+# Debug / audit / search scripts (disposable development artifacts)
+scripts/debug_*.py
+scripts/search_*.py
+scripts/phase32_*.py
+scripts/read_line*.py
+scripts/read_phase*.py
+scripts/test_acceptance_*.py
+scripts/_gate3_diag.py
+scripts/list_all_phases.py
+scripts/extract_phase2_spec.py
+scripts/validate_phase2.py
+scripts/sys_check.py
+scripts/check_tunnel_test.py
+scripts/clean_db_install.py
+scripts/live_test.py
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+*.swo
+
+# Deployment artifacts
+docker-compose.override.yml
+Caddyfile
+docker-compose.prod.yml
+
+# Test results
+debug_*.txt
+full_suite_results.txt
+regression_results.txt
+phase32_*.txt
+test_results_*.txt
+test_failures*.txt
+test_all_failures.txt
+
+# L1: dev JWT signing key must never be baked into an image
+**/.dev_jwt_secret
+.dev_jwt_secret
